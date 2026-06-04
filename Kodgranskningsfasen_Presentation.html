@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fas 2 – Kodförståelse & Säkerhetsgranskning</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Fraunces:ital,wght@0,700;1,700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#111318;
+  --surface:#1a1d24;
+  --surface2:#20242e;
+  --rule:#2a2e3a;
+  --rule2:#353a48;
+  --text:#e4e6ed;
+  --muted:#7a8099;
+  --dim:#4a5068;
+  --accent:#4f7fff;
+  --accent-soft:rgba(79,127,255,0.12);
+  --ok:#34c98a;
+  --ok-soft:rgba(52,201,138,0.10);
+  --warn:#e8a030;
+  --warn-soft:rgba(232,160,48,0.10);
+  --fail:#e85555;
+  --fail-soft:rgba(232,85,85,0.10);
+}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);font-family:'Inter',sans-serif;color:var(--text);}
+.deck{width:100vw;height:100vh;position:relative;overflow:hidden;}
+
+.slide{
+  position:absolute;inset:0;display:flex;flex-direction:column;
+  opacity:0;pointer-events:none;
+  transition:opacity 0.32s ease,transform 0.32s ease;
+  transform:translateY(18px);
+}
+.slide.active{opacity:1;pointer-events:all;transform:translateY(0);}
+.slide.exit{opacity:0;transform:translateY(-18px);}
+
+.slide-body{flex:1;display:flex;flex-direction:column;justify-content:center;padding:52px 80px;overflow:hidden;}
+
+/* NAV */
+.nav{
+  height:60px;flex-shrink:0;display:flex;align-items:center;
+  justify-content:space-between;padding:0 80px;
+  border-top:1px solid var(--rule);background:var(--surface);
+}
+.nav-dots{display:flex;gap:8px;align-items:center;}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--dim);cursor:pointer;transition:all 0.2s;}
+.dot.active{background:var(--accent);transform:scale(1.25);}
+.nav-btns{display:flex;gap:10px;}
+.nav-btn{
+  background:var(--surface2);border:1px solid var(--rule2);color:var(--text);
+  padding:9px 22px;font-family:'Inter',sans-serif;font-size:13px;font-weight:500;
+  cursor:pointer;border-radius:8px;transition:all 0.15s;
+}
+.nav-btn:hover{border-color:var(--accent);color:var(--accent);}
+.nav-btn:disabled{opacity:0.25;cursor:default;}
+.slide-counter{font-size:12px;color:var(--muted);letter-spacing:1.5px;}
+
+/* EYEBROW + HEADING */
+.eyebrow{font-size:11px;font-weight:600;color:var(--muted);letter-spacing:3px;text-transform:uppercase;margin-bottom:12px;}
+.slide-heading{font-family:'Fraunces',serif;font-size:clamp(28px,3.5vw,46px);font-weight:700;letter-spacing:-1px;color:var(--text);margin-bottom:28px;}
+
+/* ── SLIDE 1: TITLE ── */
+.s1{background:linear-gradient(140deg,#0d1b3e 0%,#111318 45%,#1a0d2e 100%);}
+.s1 .slide-body{align-items:center;text-align:center;padding:64px 80px;}
+.s1-label{font-size:11px;font-weight:600;color:rgba(255,255,255,0.35);letter-spacing:3px;text-transform:uppercase;margin-bottom:24px;}
+.s1-title{font-family:'Fraunces',serif;font-size:clamp(48px,7vw,90px);font-weight:700;line-height:1.0;letter-spacing:-3px;color:var(--text);}
+.s1-title em{font-style:italic;color:var(--accent);}
+.s1-desc{font-size:16px;line-height:1.8;color:var(--muted);margin-top:28px;max-width:520px;}
+
+/* ── OVERVIEW TABLE ── */
+table{width:100%;border-collapse:collapse;}
+thead th{font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--muted);padding:0 20px 14px;text-align:left;border-bottom:1px solid var(--rule2);}
+tbody tr{border-bottom:1px solid var(--rule);transition:background 0.12s;}
+tbody tr:last-child{border-bottom:none;}
+tbody tr:hover{background:rgba(255,255,255,0.025);}
+tbody td{padding:14px 20px;font-size:14px;vertical-align:middle;line-height:1.5;}
+.krav-id{font-weight:600;color:var(--text);font-size:13px;}
+.krav-name{color:var(--muted);font-size:13px;}
+
+.badge{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:6px;font-size:12px;font-weight:600;letter-spacing:0.4px;}
+.badge-fail{background:var(--fail-soft);color:var(--fail);border:1px solid rgba(232,85,85,0.25);}
+.badge-warn{background:var(--warn-soft);color:var(--warn);border:1px solid rgba(232,160,48,0.25);}
+.badge-ok{background:var(--ok-soft);color:var(--ok);border:1px solid rgba(52,201,138,0.25);}
+
+/* ── DETAIL CARDS ── */
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;height:100%;}
+.detail-card{background:var(--surface);border:1px solid var(--rule);border-radius:12px;padding:28px;display:flex;flex-direction:column;gap:14px;}
+.detail-card.fail{border-left:3px solid var(--fail);}
+.detail-card.warn{border-left:3px solid var(--warn);}
+.detail-card.ok{border-left:3px solid var(--ok);}
+
+.card-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;}
+.card-title{font-size:13px;font-weight:600;color:var(--text);letter-spacing:0.2px;}
+.card-id{font-size:11px;font-weight:600;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:4px;}
+
+.section-label{font-size:10px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--dim);margin-bottom:6px;}
+.card-text{font-size:13px;line-height:1.7;color:var(--muted);}
+.card-text strong{color:var(--text);font-weight:500;}
+
+.code-block{background:#0d0f14;border:1px solid var(--rule);border-radius:8px;padding:14px 16px;font-family:'Courier New',monospace;font-size:12px;line-height:1.7;color:#a8b5cc;overflow:hidden;}
+.code-block .hl{color:#e85555;font-weight:600;}
+.code-block .hl-ok{color:var(--ok);}
+.code-block .comment{color:#4a5068;}
+
+/* ── SINGLE DETAIL SLIDE ── */
+.single-detail{display:flex;flex-direction:column;gap:20px;max-width:900px;width:100%;}
+.single-detail .card-text{font-size:14px;}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+.box{background:var(--surface);border:1px solid var(--rule);border-radius:10px;padding:22px;}
+.box-title{font-size:10px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--dim);margin-bottom:12px;}
+
+/* ── SUMMARY ── */
+.sum-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px;}
+.sum-card{background:var(--surface);border:1px solid var(--rule);border-radius:10px;padding:22px;text-align:center;}
+.sum-card.fail{border-top:3px solid var(--fail);}
+.sum-card.warn{border-top:3px solid var(--warn);}
+.sum-id{font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;}
+.sum-status{font-family:'Fraunces',serif;font-size:22px;font-weight:700;font-style:italic;}
+.sum-card.fail .sum-status{color:var(--fail);}
+.sum-card.warn .sum-status{color:var(--warn);}
+.sum-note{font-size:12px;color:var(--dim);margin-top:6px;line-height:1.5;}
+
+.prio-row{display:flex;gap:12px;}
+.prio-item{flex:1;background:var(--surface);border:1px solid var(--rule);border-radius:8px;padding:16px;}
+.prio-label{font-size:10px;font-weight:600;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;}
+.prio-item.high .prio-label{color:var(--fail);}
+.prio-item.med .prio-label{color:var(--warn);}
+.prio-item p{font-size:13px;color:var(--muted);line-height:1.6;}
+.prio-item p strong{color:var(--text);}
+</style>
+</head>
+<body>
+<div class="deck">
+
+  <!-- SLIDE 1: TITLE -->
+  <div class="slide s1 active" id="slide-0">
+    <div class="slide-body">
+      <div class="s1-label">Fas 2 – Kodförståelse</div>
+      <div class="s1-title">Säkerhets&shy;<em>granskning</em></div>
+      <div class="s1-desc">Analys av befintlig kod mot kravspecifikationen från planeringsfasen — vad uppfylls, vad brister och varför.</div>
+    </div>
+    <div class="nav">
+      <div class="nav-dots" id="dots-0"></div>
+      <div class="slide-counter">01 / 06</div>
+      <div class="nav-btns">
+        <button class="nav-btn" onclick="go(-1)" disabled>← Föregående</button>
+        <button class="nav-btn" onclick="go(1)">Nästa →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 2: ÖVERSIKT -->
+  <div class="slide" id="slide-1">
+    <div class="slide-body">
+      <div class="eyebrow">Statusöversikt</div>
+      <div class="slide-heading">Krav mot kod</div>
+      <table>
+        <thead>
+          <tr>
+            <th>Krav</th>
+            <th>Beskrivning</th>
+            <th>Status</th>
+            <th>Allvarlighet</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="krav-id">KR-01</span></td>
+            <td><span class="krav-name">Lösenordsstyrka — min 8, max 50 tecken</span></td>
+            <td><span class="badge badge-fail">❌ Uppfylls ej</span></td>
+            <td><span class="badge badge-warn">Medel</span></td>
+          </tr>
+          <tr>
+            <td><span class="krav-id">KR-02</span></td>
+            <td><span class="krav-name">Åtkomstkontroll — endast inloggad kan ändra</span></td>
+            <td><span class="badge badge-warn">⚠ Delvis</span></td>
+            <td><span class="badge badge-fail">Hög</span></td>
+          </tr>
+          <tr>
+            <td><span class="krav-id">KR-03</span></td>
+            <td><span class="krav-name">Brute-force-skydd — begränsning per IP</span></td>
+            <td><span class="badge badge-fail">❌ Uppfylls ej</span></td>
+            <td><span class="badge badge-fail">Hög</span></td>
+          </tr>
+          <tr>
+            <td><span class="krav-id">KR-04</span></td>
+            <td><span class="krav-name">Felmeddelanden — inga ledtrådar om vad som är fel</span></td>
+            <td><span class="badge badge-fail">❌ Uppfylls ej</span></td>
+            <td><span class="badge badge-warn">Medel</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="nav">
+      <div class="nav-dots" id="dots-1"></div>
+      <div class="slide-counter">02 / 06</div>
+      <div class="nav-btns">
+        <button class="nav-btn" onclick="go(-1)">← Föregående</button>
+        <button class="nav-btn" onclick="go(1)">Nästa →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 3: KR-01 & KR-04 -->
+  <div class="slide" id="slide-2">
+    <div class="slide-body" style="justify-content:flex-start;padding-top:44px;">
+      <div class="eyebrow">Kodanalys</div>
+      <div class="slide-heading">KR-01 &amp; KR-04</div>
+      <div class="detail-grid">
+
+        <!-- KR-01 -->
+        <div class="detail-card fail">
+          <div class="card-header">
+            <div>
+              <div class="card-id">KR-01</div>
+              <div class="card-title">Lösenordsstyrka</div>
+            </div>
+            <span class="badge badge-fail">❌ Uppfylls ej</span>
+          </div>
+          <div>
+            <div class="section-label">Problemet i koden</div>
+            <p class="card-text">I <strong>/register</strong>-routen skickas lösenordet direkt till <strong>bcrypt.hash()</strong> utan någon längdvalidering. User-schemat i MongoDB saknar också min/max på lösenordsfältet.</p>
+          </div>
+          <div class="code-block">
+<span class="comment">// server.js — ingen validering sker</span>
+const hashedPassword =
+  await bcrypt.hash(<span class="hl">password</span>, 10)
+<span class="comment">// ← 1 tecken godkänns lika gärna som 200</span>
+          </div>
+          <div>
+            <div class="section-label">Åtgärd</div>
+            <p class="card-text">Lägg till en explicit kontroll <em>innan</em> hashen skapas.</p>
+          </div>
+          <div class="code-block">
+<span class="hl-ok">if (!password ||
+    password.length &lt; 8 ||
+    password.length &gt; 50) {
+  return res.status(400).json({
+    message: "Password must be 8–50 chars"
+  })
+}</span>
+          </div>
+        </div>
+
+        <!-- KR-04 -->
+        <div class="detail-card fail">
+          <div class="card-header">
+            <div>
+              <div class="card-id">KR-04</div>
+              <div class="card-title">Felmeddelanden vid inloggning</div>
+            </div>
+            <span class="badge badge-fail">❌ Uppfylls ej</span>
+          </div>
+          <div>
+            <div class="section-label">Problemet i koden</div>
+            <p class="card-text"><strong>/login</strong>-routen returnerar två distinkta felmeddelanden beroende på vad som gick fel. En angripare kan därmed ta reda på om ett konto existerar — s.k. <strong>user enumeration</strong>.</p>
+          </div>
+          <div class="code-block">
+<span class="comment">// Avslöjar att kontot inte finns:</span>
+message: <span class="hl">"No account found with that
+         username or email"</span>
+
+<span class="comment">// Avslöjar att kontot finns men fel lösenord:</span>
+message: <span class="hl">"Password is incorrect"</span>
+          </div>
+          <div>
+            <div class="section-label">Åtgärd</div>
+            <p class="card-text">Ersätt båda med ett identiskt, generiskt svar.</p>
+          </div>
+          <div class="code-block">
+<span class="hl-ok">return res.status(401).json({
+  message: "Invalid credentials"
+})</span>
+<span class="comment">// Används i båda felfall — inget avslöjas</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+    <div class="nav">
+      <div class="nav-dots" id="dots-2"></div>
+      <div class="slide-counter">03 / 06</div>
+      <div class="nav-btns">
+        <button class="nav-btn" onclick="go(-1)">← Föregående</button>
+        <button class="nav-btn" onclick="go(1)">Nästa →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 4: KR-02 -->
+  <div class="slide" id="slide-3">
+    <div class="slide-body" style="justify-content:flex-start;padding-top:44px;">
+      <div class="eyebrow">Kodanalys</div>
+      <div class="slide-heading">KR-02 — Åtkomstkontroll</div>
+      <div class="single-detail">
+        <div class="card-header" style="margin-bottom:4px;">
+          <span class="badge badge-warn" style="font-size:13px;padding:6px 16px;">⚠ Delvis uppfyllt — kritisk lucka</span>
+        </div>
+        <p class="card-text">Middleware <strong>authenticateUser</strong> verifierar JWT-token och används korrekt på POST och PATCH. Men <strong>DELETE</strong>-routen saknar den helt — vem som helst kan radera ett meddelande utan att vara inloggad.</p>
+        <div class="row2">
+          <div class="box">
+            <div class="box-title">Skyddade routes ✓</div>
+            <div class="code-block">
+app.post("/messages",
+  <span class="hl-ok">authenticateUser</span>, handler)
+
+app.patch("/messages/:id",
+  <span class="hl-ok">authenticateUser</span>, handler)
+            </div>
+          </div>
+          <div class="box">
+            <div class="box-title">Oskyddad route ✗</div>
+            <div class="code-block">
+app.delete("/messages/:id",
+  <span class="hl">/* ingen middleware */</span>
+  async (req, res) => {
+    <span class="comment">// Ingen koll på vem som anropar</span>
+    await message.deleteOne()
+  })
+            </div>
+          </div>
+        </div>
+        <div class="box">
+          <div class="box-title">Åtgärd — lägg till authenticateUser + ägarskontroll</div>
+          <div class="code-block">
+app.delete("/messages/:id", <span class="hl-ok">authenticateUser</span>, async (req, res) => {
+  const message = await Message.findById(req.params.id)
+  <span class="hl-ok">if (message.user.toString() !== req.user._id.toString()) {
+    return res.status(403).json({ error: "You can only delete your own messages" })
+  }</span>
+  await message.deleteOne()
+})
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="nav">
+      <div class="nav-dots" id="dots-3"></div>
+      <div class="slide-counter">04 / 06</div>
+      <div class="nav-btns">
+        <button class="nav-btn" onclick="go(-1)">← Föregående</button>
+        <button class="nav-btn" onclick="go(1)">Nästa →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 5: KR-03 -->
+  <div class="slide" id="slide-4">
+    <div class="slide-body" style="justify-content:flex-start;padding-top:44px;">
+      <div class="eyebrow">Kodanalys</div>
+      <div class="slide-heading">KR-03 — Brute-force-skydd</div>
+      <div class="single-detail">
+        <div class="card-header" style="margin-bottom:4px;">
+          <span class="badge badge-fail" style="font-size:13px;padding:6px 16px;">❌ Saknas helt</span>
+        </div>
+        <p class="card-text"><strong>/login</strong>-routen har inga begränsningar på antalet inloggningsförsök. En angripare kan skicka tusentals lösenordsförsök per sekund från samma IP utan att blockeras.</p>
+        <div class="row2">
+          <div class="box">
+            <div class="box-title">Nuläget — obegränsade försök</div>
+            <div class="code-block">
+app.post("/login", async (req, res) => {
+  <span class="comment">// Inga begränsningar</span>
+  <span class="comment">// 1 000 försök/sekund? Inga problem.</span>
+  const user = await User.findOne(...)
+  ...
+})
+            </div>
+          </div>
+          <div class="box">
+            <div class="box-title">Åtgärd — express-rate-limit</div>
+            <div class="code-block">
+import rateLimit from "express-rate-limit"
+
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, <span class="comment">// 15 min</span>
+  max: 10, <span class="comment">// max 10 försök/IP</span>
+  message: "Too many attempts"
+})
+
+app.post("/login",
+  <span class="hl-ok">loginLimiter</span>,
+  async (req, res) => { ... })
+            </div>
+          </div>
+        </div>
+        <div class="box">
+          <div class="box-title">Om paketet express-rate-limit</div>
+          <p class="card-text" style="margin-top:0;">Det är det de facto standardverktyget för rate limiting i Express och länkas i Express officiella säkerhetsguider. Paketet har <strong>10+ miljoner nedladdningar per vecka</strong> på npm och är aktivt underhållet. Trots det bör man alltid verifiera med <strong>npm audit</strong> och låsa versioner i <strong>package-lock.json</strong>.</p>
+        </div>
+      </div>
+    </div>
+    <div class="nav">
+      <div class="nav-dots" id="dots-4"></div>
+      <div class="slide-counter">05 / 06</div>
+      <div class="nav-btns">
+        <button class="nav-btn" onclick="go(-1)">← Föregående</button>
+        <button class="nav-btn" onclick="go(1)">Nästa →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 6: SAMMANFATTNING -->
+  <div class="slide" id="slide-5">
+    <div class="slide-body" style="justify-content:flex-start;padding-top:44px;">
+      <div class="eyebrow">Slutsats</div>
+      <div class="slide-heading">Sammanfattning</div>
+      <div class="sum-grid">
+        <div class="sum-card fail">
+          <div class="sum-id">KR-01</div>
+          <div class="sum-status">Saknas</div>
+          <div class="sum-note">Ingen längdvalidering av lösenord</div>
+        </div>
+        <div class="sum-card warn">
+          <div class="sum-id">KR-02</div>
+          <div class="sum-status">Delvis</div>
+          <div class="sum-note">DELETE-route saknar autentisering</div>
+        </div>
+        <div class="sum-card fail">
+          <div class="sum-id">KR-03</div>
+          <div class="sum-status">Saknas</div>
+          <div class="sum-note">Ingen rate limiting på /login</div>
+        </div>
+        <div class="sum-card fail">
+          <div class="sum-id">KR-04</div>
+          <div class="sum-status">Saknas</div>
+          <div class="sum-note">Felmeddelanden avslöjar för mycket</div>
+        </div>
+      </div>
+      <div class="prio-row">
+        <div class="prio-item high">
+          <div class="prio-label">⬆ Högst prioritet</div>
+          <p><strong>KR-02:</strong> Oskyddad DELETE möjliggör att vem som helst raderar andras meddelanden — en direkt funktionell säkerhetslucka.<br><br>
+          <strong>KR-03:</strong> Utan rate limiting är brute-force-attacker mot lösenord triviala att genomföra.</p>
+        </div>
+        <div class="prio-item med">
+          <div class="prio-label">↑ Medel prioritet</div>
+          <p><strong>KR-01:</strong> Avsaknad av lösenordsvalidering sänker säkerhetsribban för alla användare i systemet.<br><br>
+          <strong>KR-04:</strong> Distinkta felmeddelanden möjliggör kontouppräkning och underlättar riktade attacker.</p>
+        </div>
+      </div>
+    </div>
+    <div class="nav">
+      <div class="nav-dots" id="dots-5"></div>
+      <div class="slide-counter">06 / 06</div>
+      <div class="nav-btns">
+        <button class="nav-btn" onclick="go(-1)">← Föregående</button>
+        <button class="nav-btn" onclick="go(1)" disabled>Nästa →</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+<script>
+const slides=document.querySelectorAll('.slide');
+const allDotContainers=document.querySelectorAll('.nav-dots');
+const total=slides.length;
+let cur=0;
+
+function buildDots(){
+  allDotContainers.forEach((container,si)=>{
+    container.innerHTML='';
+    slides.forEach((__,di)=>{
+      const d=document.createElement('div');
+      d.className='dot'+(di===si?' active':'');
+      d.onclick=()=>goTo(di);
+      container.appendChild(d);
+    });
+  });
+}
+buildDots();
+
+function updateDots(){
+  allDotContainers.forEach((container)=>{
+    container.querySelectorAll('.dot').forEach((d,di)=>d.classList.toggle('active',di===cur));
+  });
+}
+
+function goTo(n){
+  slides[cur].classList.remove('active');
+  slides[cur].classList.add('exit');
+  setTimeout(()=>slides[cur].classList.remove('exit'),360);
+  cur=n;
+  slides[cur].classList.add('active');
+  updateDots();
+}
+function go(dir){if(cur+dir>=0&&cur+dir<total)goTo(cur+dir);}
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowRight'||e.key==='ArrowDown')go(1);
+  if(e.key==='ArrowLeft'||e.key==='ArrowUp')go(-1);
+});
+</script>
+</body>
+</html>
