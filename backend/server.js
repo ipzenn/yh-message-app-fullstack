@@ -44,7 +44,11 @@ app.post("/register", async (req, res) => {
         message: `A user with this ${field} already exists`
       })
     }
-
+    
+    // SECURITY REVIEW (KR-01):
+    // Password length is not validated before hashing.
+    // Consider validating that passwords are between
+    // 8 and 50 characters before creating the hash.  
     const hashedPassword = await bcrypt.hash(password, 10)
     const user = new User({ username: username.trim(), email, password: hashedPassword })
     await user.save()
@@ -73,13 +77,20 @@ app.post("/register", async (req, res) => {
   }
 })
 
+// SECURITY REVIEW (KR-03):
+// No rate limiting is applied to this endpoint.
+// Consider implementing express-rate-limit to reduce
+// the risk of brute-force attacks.
 app.post("/login", async (req, res) => {
   try {
     const { login, password } = req.body
     const user = await User.findOne({
       $or: [{ username: login }, { email: login }]
     })
-
+    // SECURITY REVIEW (KR-04):
+    // This response reveals whether an account exists.
+    // Consider using a generic error message such as
+    // "Invalid credentials".
     if (!user) {
       return res.status(401).json({
         success: false,
@@ -89,6 +100,10 @@ app.post("/login", async (req, res) => {
     }
 
     const passwordMatch = await bcrypt.compare(password, user.password)
+    // SECURITY REVIEW (KR-04):
+    // Different login responses allow user enumeration.
+    // Consider returning the same generic error message
+    // for both invalid usernames and incorrect passwords.
     if (!passwordMatch) {
       return res.status(401).json({
         success: false,
@@ -165,6 +180,10 @@ app.patch("/messages/:id", authenticateUser, async (req, res) => {
   }
 })
 
+// SECURITY REVIEW (KR-02):
+// This route lacks authentication middleware.
+// Consider adding authenticateUser and verifying
+// that users can only delete their own messages.
 app.delete("/messages/:id", async (req, res) => {
   if (!isValidId(req.params.id)) return res.status(400).json({ error: "Invalid message ID" })
   try {
